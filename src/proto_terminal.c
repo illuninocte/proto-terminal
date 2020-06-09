@@ -8,8 +8,11 @@ void list(DIR*d, struct dirent *dir){
         if(dir->d_name[0] != '.'){
             if(flag)
                 printf(" ");
-            if(dir->d_type == DT_DIR)
+            if(dir->d_type == DT_DIR){
+                printf(ANSI_COLOR_BLUE);
                 printf("%s/", dir->d_name);
+                printf(ANSI_COLOR_RESET);
+            }
             else
                 printf("%s", dir->d_name);
         }
@@ -54,10 +57,12 @@ void change_directory(char* dir_path, char* curr_dirr, DIR **d){
 
 void show_curr_dir(char home[], char curr_dirr[]){
     int home_index = index_of(curr_dirr, home);
+    printf(ANSI_COLOR_GREEN);
     if(home_index == 0)
         printf("~/%s$ ", curr_dirr + strlen(home));
     else
         printf("%s$ ", curr_dirr);
+    printf(ANSI_COLOR_RESET);
 }
 
 void show_curr_path(char * curr){
