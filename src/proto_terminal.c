@@ -3,6 +3,25 @@
 const int max_dir_sz = 511;
 const int buffer_size = 255;
 
+void list(DIR*d, struct dirent *dir){
+    int flag = 0;
+    while((dir = readdir(d)) != NULL) {
+        if(dir->d_name[0] != '.'){
+            if(flag)
+                printf(" ");
+            if(dir->d_type == DT_DIR){
+                printf(ANSI_COLOR_BLUE);
+                printf("%s/", dir->d_name);
+                printf(ANSI_COLOR_RESET);
+            }
+            else
+                printf("%s", dir->d_name);
+        }
+        flag = 1;
+    }
+    printf("\n");
+}
+
 void show_error(char* function, char* error){
     printf("-proto-terminal: %s: %s\n", function, error);
 }
