@@ -6,4 +6,5 @@ set(C_STANDARD 11)
 include_directories(header)
 file(GLOB SOURCES src/*.c header/*.h)
 
+add_executable(ls ls.c ${SOURCES})
 add_executable(terminal main.c ${SOURCES})

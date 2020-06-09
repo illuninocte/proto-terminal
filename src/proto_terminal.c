@@ -1,29 +1,10 @@
 #include "../header/proto_terminal.h"
 
 const int max_dir_sz = 511;
-
-void list(DIR*d, struct dirent *dir){
-    int flag = 0;
-    while((dir = readdir(d)) != NULL) {
-        if(dir->d_name[0] != '.'){
-            if(flag)
-                printf(" ");
-            if(dir->d_type == DT_DIR){
-                printf(ANSI_COLOR_BLUE);
-                printf("%s/", dir->d_name);
-                printf(ANSI_COLOR_RESET);
-            }
-            else
-                printf("%s", dir->d_name);
-        }
-        flag = 1;
-    }
-    printf("\n");
-}
+const int buffer_size = 255;
 
 void show_error(char* function, char* error){
     printf("-proto-terminal: %s: %s\n", function, error);
-
 }
 
 void change_directory(char* dir_path, char* curr_dirr, DIR **d){
@@ -69,20 +50,28 @@ void show_curr_path(char * curr){
     printf("%s\n", curr);
 }
 
-int do_command(char home[], char buffer[],char curr_dirr[], DIR **d, struct dirent **dir){
-    remove_line_break(buffer);
-    if(strcmp(buffer, "ls") == 0){
-        list(*d, *dir);       
-    } else if(strlen(buffer) > 1 && buffer[0] == 'c' && buffer[1] == 'd'){
-        char path[255];
-        substr(3, strlen(buffer)-3, buffer, path);
-        change_directory(path, curr_dirr, d);
-    }else if(strcmp(buffer, "pwd") == 0){
+int built_in(int argc, char argv[][buffer_size], char curr_dirr[], DIR **d, struct dirent **dir){
+    if(strcmp(argv[0], "cd") == 0) {
+        change_directory(argv[1], curr_dirr, d);   
+    } else if(strcmp(argv[0], "ls") == 0) {
+        strcpy(argv[0], "build/ls");
+        strcpy(argv[argc++], curr_dirr);
+        call_programming(argc, argv, curr_dirr);
+    } else if(strcmp(argv[0], "pwd") == 0) {
         show_curr_path(curr_dirr);
-    } else if(strcmp(buffer, "exit") == 0){
+    } else if(strcmp(argv[0], "exit") == 0) {
+        return -1;
+    } else{
         return 0;
     }
-    show_curr_dir(home, curr_dirr);
+    return 1;
+}
+
+int do_command(int argc, char argv[][buffer_size], char curr_dirr[], DIR **d, struct dirent **dir) {
+    int isBuilt = built_in(argc, argv, curr_dirr, d, dir);
+    if(isBuilt == 1 || isBuilt == -1)
+        return isBuilt;
+    return call_programming(argc, argv, curr_dirr);
 }
 
 void run(int len, char home[]){
@@ -93,13 +82,15 @@ void run(int len, char home[]){
     else
         d = opendir(".");
     if(d) {
-        const int buffer_size = 255;
-        char buffer[buffer_size], curr_dirr[max_dir_sz];
+        char buffer[buffer_size], curr_dirr[max_dir_sz], argv[buffer_size][buffer_size];
         strcpy(curr_dirr, home);
         show_curr_dir(home, curr_dirr);
+        int argc;
         while(fgets(buffer, buffer_size, stdin)) {
-            if(do_command(home, buffer, curr_dirr, &d, &dir) == 0)
+            argc = split(buffer, ' ', argv);
+            if(do_command(argc, argv, curr_dirr, &d, &dir) == -1)
                 break;
+            show_curr_dir(home, curr_dirr);
         }   
         closedir(d);
     } else{
@@ -126,4 +117,30 @@ void init(){
     }
     fclose(fp);
     run(len_home, home);
+}
+
+int call_programming(int argc, char argv[][buffer_size], char* curr_dir){
+    int rc = fork();
+    if (rc < 0) {
+        fprintf(stderr, "Cannot fork\n");
+        return 0;
+    } else if (rc == 0) {
+        char *myargs[buffer_size];
+        if(argv[0][0] == '.'){
+            myargs[0] = strdup(curr_dir);
+            add(myargs[0], argv[0]+2);
+        } else{
+            myargs[0] =  strdup(argv[0]);
+        }
+        for(int i=1; i<argc; i++)
+            myargs[i] = strdup(argv[i]);
+        myargs[argc] = NULL;
+        int c = execvp(myargs[0], myargs);
+        if(c < 0)
+            show_error(myargs[0], "No such file or directory");
+        exit(0);
+    } else {
+        int wc = wait(NULL);
+    }
+    return 1;
 }
