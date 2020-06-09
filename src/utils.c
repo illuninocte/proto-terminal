@@ -1,4 +1,5 @@
 #include "../header/utils.h"
+#include <stdio.h>
 
 int index_of(char* s, char* key) {
     if(strlen(s) >= strlen(key)){
@@ -32,4 +33,21 @@ void add(char* a, char* b){
         a[i+sz_a] = b[i];
     }
     a[sz_a + sz_b] = 0;
+}
+
+int split(char* str, char separator, char res[][255]) {
+    int index = 0, i=0, sz = 0;
+    while(str[i]){
+        if(str[i] == separator || str[i] == '\n') {
+            res[index][sz] = 0;
+            sz = 0;
+            index++;
+        } else{
+            res[index][sz] = str[i];
+            sz++;
+        }
+        i++;
+    }
+    res[index][sz] = 0;
+    return index + (str[i-1] != '\n');
 }
