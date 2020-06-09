@@ -3,8 +3,14 @@
 const int max_dir_sz = 511;
 const int buffer_size = 255;
 
-void list(DIR*d, struct dirent *dir){
+void list(char *path){
+    DIR *d; d = opendir(path);
+    if(!d){
+        show_error("ls", "directory not found.");
+        return;
+    }
     int flag = 0;
+    struct dirent *dir;
     while((dir = readdir(d)) != NULL) {
         if(dir->d_name[0] != '.'){
             if(flag)
@@ -16,105 +22,44 @@ void list(DIR*d, struct dirent *dir){
             }
             else
                 printf("%s", dir->d_name);
+            flag = 1;
         }
-        flag = 1;
     }
     printf("\n");
+    closedir(d);
 }
 
 void show_error(char* function, char* error){
-    printf("-proto-terminal: %s: %s\n", function, error);
+    printf("%s: %s\n", function, error);
 }
 
-void change_directory(char* dir_path, char* curr_dirr, DIR **d){
+void change_directory(char* new_path, char* cur_path, DIR **d){
     DIR *new_d;
-    char new_dir[max_dir_sz];
-    if(dir_path[0] == '/'){
-        strcpy(new_dir, dir_path);
-    } else{
-        strcpy(new_dir, curr_dirr);
-        add(new_dir, dir_path);
-    }
-    new_d = opendir(new_dir);
+    char dest_path[max_dir_sz];
+    update_path(new_path, cur_path, dest_path);
+    new_d = opendir(dest_path);
     if(new_d){
         closedir((*d));
         (*d) = new_d;
-        if(strcmp(dir_path, "..") != 0)
-            strcpy(curr_dirr, new_dir);
-        else{
-            int i, curr_sz = strlen(curr_dirr);
-            for(i=curr_sz-2; i>=0; i--)
-                if(curr_dirr[i] == '/')
-                    break;
-            curr_dirr[i+1] = 0;
-        }
-        if(curr_dirr[strlen(curr_dirr)-1] != '/')
-            add(curr_dirr, "/");
+        strcpy(cur_path, dest_path);
     } else {
         show_error("cd", "No such file or directory");
     }
 }
 
-void show_curr_dir(char home[], char curr_dirr[]){
-    int home_index = index_of(curr_dirr, home);
+
+void show_curr_dir(char home[], char cur_path[]){
+    int home_index = index_of(cur_path, home);
     printf(ANSI_COLOR_GREEN);
     if(home_index == 0)
-        printf("~/%s$ ", curr_dirr + strlen(home));
+        printf("~/%s$ ", cur_path + strlen(home));
     else
-        printf("%s$ ", curr_dirr);
+        printf("%s$ ", cur_path);
     printf(ANSI_COLOR_RESET);
 }
 
 void show_curr_path(char * curr){
     printf("%s\n", curr);
-}
-
-int built_in(int argc, char argv[][buffer_size], char curr_dirr[], DIR **d, struct dirent **dir){
-    if(strcmp(argv[0], "cd") == 0) {
-        change_directory(argv[1], curr_dirr, d);   
-    } else if(strcmp(argv[0], "ls") == 0) {
-        strcpy(argv[0], "build/ls");
-        strcpy(argv[argc++], curr_dirr);
-        call_programming(argc, argv, curr_dirr);
-    } else if(strcmp(argv[0], "pwd") == 0) {
-        show_curr_path(curr_dirr);
-    } else if(strcmp(argv[0], "exit") == 0) {
-        return -1;
-    } else{
-        return 0;
-    }
-    return 1;
-}
-
-int do_command(int argc, char argv[][buffer_size], char curr_dirr[], DIR **d, struct dirent **dir) {
-    int isBuilt = built_in(argc, argv, curr_dirr, d, dir);
-    if(isBuilt == 1 || isBuilt == -1)
-        return isBuilt;
-    return call_programming(argc, argv, curr_dirr);
-}
-
-void run(int len, char home[]){
-    DIR *d;
-    struct dirent *dir;
-    if(len != -1)
-        d = opendir(home);
-    else
-        d = opendir(".");
-    if(d) {
-        char buffer[buffer_size], curr_dirr[max_dir_sz], argv[buffer_size][buffer_size];
-        strcpy(curr_dirr, home);
-        show_curr_dir(home, curr_dirr);
-        int argc;
-        while(fgets(buffer, buffer_size, stdin)) {
-            argc = split(buffer, ' ', argv);
-            if(do_command(argc, argv, curr_dirr, &d, &dir) == -1)
-                break;
-            show_curr_dir(home, curr_dirr);
-        }   
-        closedir(d);
-    } else{
-        printf("Canot open this directory\n");
-    }
 }
 
 void init(){
@@ -132,31 +77,82 @@ void init(){
             }
         }
     } else{
-        printf("File not founded.");
+        printf("File not found.");
     }
     fclose(fp);
     run(len_home, home);
 }
 
-int call_programming(int argc, char argv[][buffer_size], char* curr_dir){
+void run(int len, char home[]){
+    DIR *d;
+    struct dirent *dir;
+    if(len != -1)
+        d = opendir(home);
+    else
+        d = opendir(".");
+    if(d) {
+        char buffer[buffer_size], cur_path[max_dir_sz], argv[buffer_size][buffer_size];
+        strcpy(cur_path, home);
+        show_curr_dir(home, cur_path);
+        int argc;
+        while(fgets(buffer, buffer_size, stdin)) {
+            do_command(buffer, cur_path, &d, &dir);
+            show_curr_dir(home, cur_path);
+        }   
+        closedir(d);
+    } else{
+        printf("Canot open this directory\n");
+    }
+}
+
+void do_command(char buffer[], char cur_path[], DIR **d, struct dirent **dir) {
+    int argc; char argv[buffer_size][buffer_size];
+    argc = split(buffer, ' ', argv);
+    
+    if(strcmp(argv[0], "cd") == 0) {
+        change_directory(argv[1], cur_path, d);
+    } else if(strcmp(argv[0], "ls") == 0) {
+        if(argc == 1) list(cur_path);
+        else {
+            char tmp_dir[max_dir_sz];
+            update_path(argv[1], cur_path, tmp_dir);
+            list(tmp_dir);
+        }
+    } else if(strcmp(argv[0], "pwd") == 0) {
+        show_curr_path(cur_path);
+    } else if(strcmp(argv[0], "exit") == 0) {
+        exit(0);
+    } else{
+        execute_program(argc, argv, cur_path);
+    }
+}
+
+int execute_program(int argc, char argv[][buffer_size], char* curr_dir){
+
     int rc = fork();
     if (rc < 0) {
-        fprintf(stderr, "Cannot fork\n");
+        fprintf(stderr, "cannot fork\n");
         return 0;
     } else if (rc == 0) {
         char *myargs[buffer_size];
-        if(argv[0][0] == '.'){
-            myargs[0] = strdup(curr_dir);
+        myargs[0] = strdup(curr_dir);
+
+        if(argv[0][0] == '.' && argv[0][1] == '/'){
             add(myargs[0], argv[0]+2);
         } else{
-            myargs[0] =  strdup(argv[0]);
+            add(myargs[0], argv[0]);
         }
         for(int i=1; i<argc; i++)
             myargs[i] = strdup(argv[i]);
         myargs[argc] = NULL;
+        printf("Executing command:");
+        for(int i=0; i<argc; i++){
+            printf(" %s", argv[i]);
+        }
+        printf("\n");
         int c = execvp(myargs[0], myargs);
         if(c < 0)
-            show_error(myargs[0], "No such file or directory");
+            show_error(myargs[0], "command not found");
         exit(0);
     } else {
         int wc = wait(NULL);

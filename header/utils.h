@@ -8,9 +8,10 @@
 #define ANSI_COLOR_BLUE    "\x1b[34m"
 
 void remove_line_break(char str[]);
-int index_of(char* s, char* key);
+int index_of(const char* s, char* key);
 void substr(int start, int sz, char* original, char* tmp);
-void add(char* a, char* b);
+void add(char* a, const char* b);
 int split(char* str, char separator, char res[][255]);
+void update_path(const char *new_path, const char *cur_path, char *dest_path);
 
 #endif
