@@ -76,6 +76,8 @@ void init(){
                 len_home = strlen(home);
             }
         }
+        while(len_home>=0 && home[len_home-1] != '/') len_home--;
+        home[len_home] = 0;
     } else{
         printf("File not found.");
     }
