@@ -8,6 +8,19 @@ Project of AEE-SO to make a prototype terminal with the commands:
 
 Also, the terminal has to be able to use pipeline commands like >, <, | and &.  
 
+#### Fast run
+
+In the first run execute the run.sh file
+
+```
+./run.sh
+```
+
+After the first run you can opent the terminal executing
+```
+build/terminal
+```
+
 #### Build (and run) instructions
 
 First change the value of "entry_dir" in the file .terminal to the home that you want use in your project, example:
