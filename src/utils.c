@@ -8,6 +8,12 @@ void erase_begin(char *str, int qtd){
     free(tmp);
 }
 
+void update_program_path(char *prog_path, const char *cur_path){
+    if(index_of(prog_path, "./") == 0) erase_begin(prog_path, 2);
+    char tmp_dir[511];
+    update_path(prog_path, cur_path, tmp_dir); tmp_dir[strlen(tmp_dir)-1] = 0;
+    strcpy(prog_path, tmp_dir);
+}
 void update_path(const char *new_path, const char *cur_path, char *dest_path){
     if(new_path[0] == '/'){
         strcpy(dest_path, new_path);
@@ -68,21 +74,4 @@ void add(char* a, const char* b){
         a[i+sz_a] = b[i];
     }
     a[sz_a + sz_b] = 0;
-}
-
-int split(char* str, char separator, char res[][255]) {
-    int index = 0, i=0, sz = 0;
-    while(str[i]){
-        if(str[i] == separator || str[i] == '\n') {
-            res[index][sz] = 0;
-            sz = 0;
-            index++;
-        } else{
-            res[index][sz] = str[i];
-            sz++;
-        }
-        i++;
-    }
-    res[index][sz] = 0;
-    return index + (str[i-1] != '\n');
 }

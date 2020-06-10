@@ -108,49 +108,94 @@ void run(int len, char home[]){
 }
 
 void do_command(char buffer[], char cur_path[], DIR **d, struct dirent **dir) {
-    int argc; char argv[buffer_size][buffer_size];
-    argc = split(buffer, ' ', argv);
+    command com;
+    get_command(buffer, &com);
+    printf("%d commands\n", com.qtd_prog);
+    for(int i=0; i<com.qtd_prog; i++){
+        printf("command %d (%d):", i, com.p[i].argc);
+        for(int j=0; j<com.p[i].argc; j++){
+            printf(" %s", com.p[i].argv[j]);
+        }
+        puts("@");
+    }
     
-    if(strcmp(argv[0], "cd") == 0) {
-        change_directory(argv[1], cur_path, d);
-    } else if(strcmp(argv[0], "ls") == 0) {
-        if(argc == 1) list(cur_path);
+    if(com.qtd_prog == 1 && strcmp(com.p[0].argv[0], "cd") == 0) {
+        change_directory(com.p[0].argv[1], cur_path, d);
+    } else if(com.qtd_prog == 1 && strcmp(com.p[0].argv[0], "ls") == 0) {
+        if(com.p[0].argc == 1) list(cur_path);
         else {
             char tmp_dir[max_dir_sz];
-            update_path(argv[1], cur_path, tmp_dir);
+            update_path(com.p[0].argv[1], cur_path, tmp_dir);
             list(tmp_dir);
         }
-    } else if(strcmp(argv[0], "pwd") == 0) {
+    } else if(com.qtd_prog == 1 && strcmp(com.p[0].argv[0], "pwd") == 0) {
         show_curr_path(cur_path);
-    } else if(strcmp(argv[0], "exit") == 0) {
+    } else if(com.qtd_prog == 1 && strcmp(com.p[0].argv[0], "exit") == 0) {
         exit(0);
     } else{
-        if(index_of(argv[0], "./") == 0) erase_begin(argv[0], 2);
-
-        char tmp_dir[max_dir_sz];
-        update_path(argv[0], cur_path, tmp_dir); tmp_dir[strlen(tmp_dir)-1] = 0;
-        strcpy(argv[0], tmp_dir);
-        puts(argv[0]);
-
-        execute_program(argc, argv);
+        execute_command(&com, cur_path);
     }
 }
 
-int execute_program(int argc, char argv[][buffer_size]){
+char get_command(char* str, command *res) {
+    char operator[] = "<>|&";
+    int n = strlen(str);
+    char tmp[n+1], sz = 0;
+    int index = 0, id_prog = 0;
+    res->qtd_prog = 0;
+    for(int i=0; str[i];){
+        if(str[i] == ' ' || str[i] == '\n'){
+            if(sz == 1){
+                int j;
+                for(j=0; operator[j] && operator[j] != tmp[0]; j++);
+                if(operator[j]){
+                    res->op[id_prog] = tmp[0];
+                    res->qtd_prog = ++id_prog;
+                    res->p[id_prog].argc = index = 0;
+                    sz = 0;
 
-    int rc = fork();
-    if (rc < 0) {
-        fprintf(stderr, "cannot fork\n");
-        return 0;
-    } else if (rc == 0) {
-        char *myargs[buffer_size];
-        for(int i=0; i<argc; i++) myargs[i] = strdup(argv[i]);
+                    i++;
+                    while(str[i] && (str[i] == ' ' || str[i] == '\n')) i++; // skip space
+                    continue;
+                }
+            }
 
-        int c = execvp(myargs[0], myargs);
-        if(c < 0) show_error(myargs[0], "command not found");
-        exit(0);
-    } else {
-        int wc = wait(NULL);
+            tmp[sz] = 0;
+            strcpy(res->p[id_prog].argv[index], tmp);
+            res->p[id_prog].argc = ++index;
+            sz = 0;
+            i++;
+            while(str[i] && (str[i] == ' ' || str[i] == '\n')) i++; // skip space
+        } else{
+            tmp[sz++] = str[i++];
+        }
+    }
+    res->qtd_prog = ++id_prog;
+    return 1;
+}
+
+int execute_command(command *com, const char *cur_path){
+    program *p = (com->p);
+    char qtd_prog = com->qtd_prog;
+    char *op = com->op;
+    for(int i=0; i<qtd_prog; i++){
+        int rc = fork();
+        if (rc < 0) {
+            fprintf(stderr, "cannot fork\n");
+            return 0;
+        } else if (rc == 0) {
+            
+            char *myargs[buffer_size];
+            for(int j=0; j<p[i].argc; j++) myargs[j] = strdup(p[i].argv[j]);
+            update_program_path(myargs[0], cur_path);
+            myargs[p[i].argc] = 0;
+
+            int c = execvp(myargs[0], myargs);
+            if(c < 0) show_error(myargs[0], "command not found");
+            exit(0);
+        } else {
+            int wc = wait(NULL);
+        }
     }
     return 1;
 }

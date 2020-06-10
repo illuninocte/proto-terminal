@@ -11,8 +11,8 @@ void remove_line_break(char str[]);
 int index_of(const char* s, char* key);
 void substr(int start, int sz, char* original, char* tmp);
 void add(char* a, const char* b);
-int split(char* str, char separator, char res[][255]);
 void update_path(const char *new_path, const char *cur_path, char *dest_path);
 void erase_begin(char *str, int qtd);
+void update_program_path(char *prog_path, const char *cur_path);
 
 #endif
