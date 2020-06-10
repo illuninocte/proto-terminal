@@ -15,8 +15,13 @@ In the first run execute the run.sh file
 ```
 ./run.sh
 ```
+if the run.sh don't have permission, execute
 
-After the first run you can opent the terminal executing
+```
+sudo chmod +x run.sh
+```
+
+After the first run you can open the terminal executing
 ```
 build/terminal
 ```
