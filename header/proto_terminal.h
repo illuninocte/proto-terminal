@@ -18,7 +18,7 @@ void change_directory(char *dir_path, char curr_dirr[], DIR **d);
 void run(int len, char home[]);
 void show_curr_path(char * curr);
 void init();
-int execute_program(int argc, char argv[][buffer_size], char* curr_dir);
 void do_command(char buffer[], char curr_dirr[], DIR **d, struct dirent **dir);
+int execute_program(int argc, char argv[][buffer_size]);
 
 #endif

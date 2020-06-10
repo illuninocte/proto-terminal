@@ -2,33 +2,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void erase_begin(char *str, int qtd){
+    char *tmp = strdup(str+qtd);
+    strcpy(str, tmp);
+    free(tmp);
+}
+
 void update_path(const char *new_path, const char *cur_path, char *dest_path){
     if(new_path[0] == '/'){
         strcpy(dest_path, new_path);
-        return;
-    }
-    
-    int id = 0, cont_goback = 0;
-    while(index_of(new_path+id, "../") == 0){
-        id += 3;
-        cont_goback++;
-    }
-    if(index_of(new_path+id, "..") == 0){
-        id += 2;
-        cont_goback++;
-    }
-    
-    char *tmp_cur_path = strdup(cur_path);
-    for(int i = strlen(tmp_cur_path) - 1; i >=0 && cont_goback >= 0; i--){
-        if(tmp_cur_path[i] == '/'){
-            cont_goback--;
-            tmp_cur_path[i+1] = 0;
+    } else{
+        int id = 0, cont_goback = 0;
+        while(index_of(new_path+id, "../") == 0){
+            id += 3;
+            cont_goback++;
         }
+        if(index_of(new_path+id, "..") == 0){
+            id += 2;
+            cont_goback++;
+        }
+        
+        char *tmp_cur_path = strdup(cur_path);
+        for(int i = strlen(tmp_cur_path) - 1; i >=0 && cont_goback >= 0; i--){
+            if(tmp_cur_path[i] == '/'){
+                cont_goback--;
+                tmp_cur_path[i+1] = 0;
+            }
+        }
+        
+        strcpy(dest_path, tmp_cur_path);
+        add(dest_path, new_path+id);
     }
-    
-    strcpy(dest_path, tmp_cur_path);
-    add(dest_path, new_path+id);
-
     if(dest_path[strlen(dest_path)-1] != '/') add(dest_path, "/");
 }
 

@@ -125,11 +125,18 @@ void do_command(char buffer[], char cur_path[], DIR **d, struct dirent **dir) {
     } else if(strcmp(argv[0], "exit") == 0) {
         exit(0);
     } else{
-        execute_program(argc, argv, cur_path);
+        if(index_of(argv[0], "./") == 0) erase_begin(argv[0], 2);
+
+        char tmp_dir[max_dir_sz];
+        update_path(argv[0], cur_path, tmp_dir); tmp_dir[strlen(tmp_dir)-1] = 0;
+        strcpy(argv[0], tmp_dir);
+        puts(argv[0]);
+
+        execute_program(argc, argv);
     }
 }
 
-int execute_program(int argc, char argv[][buffer_size], char* curr_dir){
+int execute_program(int argc, char argv[][buffer_size]){
 
     int rc = fork();
     if (rc < 0) {
@@ -137,24 +144,10 @@ int execute_program(int argc, char argv[][buffer_size], char* curr_dir){
         return 0;
     } else if (rc == 0) {
         char *myargs[buffer_size];
-        myargs[0] = strdup(curr_dir);
+        for(int i=0; i<argc; i++) myargs[i] = strdup(argv[i]);
 
-        if(argv[0][0] == '.' && argv[0][1] == '/'){
-            add(myargs[0], argv[0]+2);
-        } else{
-            add(myargs[0], argv[0]);
-        }
-        for(int i=1; i<argc; i++)
-            myargs[i] = strdup(argv[i]);
-        myargs[argc] = NULL;
-        printf("Executing command:");
-        for(int i=0; i<argc; i++){
-            printf(" %s", argv[i]);
-        }
-        printf("\n");
         int c = execvp(myargs[0], myargs);
-        if(c < 0)
-            show_error(myargs[0], "command not found");
+        if(c < 0) show_error(myargs[0], "command not found");
         exit(0);
     } else {
         int wc = wait(NULL);
