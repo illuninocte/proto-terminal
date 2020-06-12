@@ -44,3 +44,17 @@ make
 cd ..
 build/terminal
 ```
+
+#### Tests
+
+Compile the soma_arg.cpp and quadrado_narg.cpp in the tests/ folder.
+
+Run the project.
+Use the cd command to go to the repository path and run:
+
+```
+./soma_arg 2 2 | ./quadrado_narg
+```
+The result should be: 16
+
+(2 + 2)^2

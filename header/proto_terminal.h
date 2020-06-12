@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "utils.h"
+#include <fcntl.h>
 
 const int max_dir_sz;
 const int buffer_size;

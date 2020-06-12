@@ -110,14 +110,6 @@ void run(int len, char home[]){
 void do_command(char buffer[], char cur_path[], DIR **d, struct dirent **dir) {
     command com;
     get_command(buffer, &com);
-    printf("%d commands\n", com.qtd_prog);
-    for(int i=0; i<com.qtd_prog; i++){
-        printf("command %d (%d):", i, com.p[i].argc);
-        for(int j=0; j<com.p[i].argc; j++){
-            printf(" %s", com.p[i].argv[j]);
-        }
-        puts("@");
-    }
     
     if(com.qtd_prog == 1 && strcmp(com.p[0].argv[0], "cd") == 0) {
         change_directory(com.p[0].argv[1], cur_path, d);
@@ -145,6 +137,7 @@ char get_command(char* str, command *res) {
     res->qtd_prog = 0;
     for(int i=0; str[i];){
         if(str[i] == ' ' || str[i] == '\n'){
+            res->op[id_prog] = 0;
             if(sz == 1){
                 int j;
                 for(j=0; operator[j] && operator[j] != tmp[0]; j++);
@@ -153,7 +146,6 @@ char get_command(char* str, command *res) {
                     res->qtd_prog = ++id_prog;
                     res->p[id_prog].argc = index = 0;
                     sz = 0;
-
                     i++;
                     while(str[i] && (str[i] == ' ' || str[i] == '\n')) i++; // skip space
                     continue;
@@ -178,24 +170,70 @@ int execute_command(command *com, const char *cur_path){
     program *p = (com->p);
     char qtd_prog = com->qtd_prog;
     char *op = com->op;
+
     for(int i=0; i<qtd_prog; i++){
+        
         int rc = fork();
         if (rc < 0) {
             fprintf(stderr, "cannot fork\n");
             return 0;
         } else if (rc == 0) {
-            
-            char *myargs[buffer_size];
-            for(int j=0; j<p[i].argc; j++) myargs[j] = strdup(p[i].argv[j]);
-            update_program_path(myargs[0], cur_path);
-            myargs[p[i].argc] = 0;
+            if(op[i] != '|'){
+                char *myargs[buffer_size];
+                update_program_path(p[i].argv[0], cur_path);
+                for(int j=0; j<p[i].argc; j++) myargs[j] = strdup(p[i].argv[j]);
+                myargs[p[i].argc] = 0;
 
-            int c = execvp(myargs[0], myargs);
-            if(c < 0) show_error(myargs[0], "command not found");
-            exit(0);
+                if(op[i] == '<'){
+                    close(0);
+                    char *path = strdup(p[i+1].argv[0]);
+                    update_program_path(path, cur_path);
+                    open(path, O_RDONLY);
+                } else if(op[i] == '>'){
+                    close(1);
+                    char *path = strdup(p[i+1].argv[0]);
+                    update_program_path(path, cur_path);
+                    open(path, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
+                }
+            
+                int c = execvp(myargs[0], myargs);
+                if(c < 0) show_error(myargs[0], "command not found");
+                exit(0);
+            } else{
+                int fd[2];
+                char output_path[] = "/tmp/tmp_output321";
+                pipe(fd);
+                int rc2 = fork();
+                int id_program = i;
+                if(rc2 < 0){
+                    fprintf(stderr, "cannot fork\n");
+                    exit(0);
+                } else if(rc2 == 0) {
+                    close(1);
+                    dup(fd[1]);
+                } else {
+                    int wc = wait(NULL);
+                    close(0);
+                    dup(fd[0]);
+                    id_program = id_program+1;
+                }
+                
+                char *myargs[buffer_size];
+                update_program_path(p[id_program].argv[0], cur_path);
+                for(int j=0; j<p[id_program].argc; j++) myargs[j] = strdup(p[id_program].argv[j]);
+                myargs[p[id_program].argc] = 0;
+
+                int c = execvp(myargs[0], myargs);
+                if(c < 0) show_error(myargs[0], "command not found");
+                exit(0);
+            }
         } else {
-            int wc = wait(NULL);
+            if(op[i] != '&'){
+                int wc = waitpid(rc, NULL, WCONTINUED);
+                if(op[i] != 0) i++;
+            }
         }
     }
-    return 1;
+ 
+   return 1;
 }
